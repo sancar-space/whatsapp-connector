@@ -10,8 +10,7 @@ ENV GONOSUMDB=*
 ENV GOFLAGS=-mod=mod
 
 COPY . .
-RUN go get go.mau.fi/whatsmeow@19d61352436f3aeb21ad2cf93c2e3599ac409415 && \
-    go mod tidy && go mod download
+RUN go mod tidy && go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /connector ./cmd/connector
 
 # ---
