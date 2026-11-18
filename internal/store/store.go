@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -35,16 +36,13 @@ func (s *SessionStore) Container(sessionID string) (*sqlstore.Container, error) 
 	if err != nil {
 		return nil, fmt.Errorf("store: open sqlite %s: %w", dbPath, err)
 	}
-	container, err := sqlstore.NewWithDB(db, "sqlite3", waLog.Stdout("whatsmeow", "WARN", true))
-	if err != nil {
-		return nil, fmt.Errorf("store: init sqlstore: %w", err)
-	}
+	container := sqlstore.NewWithDB(db, "sqlite3", waLog.Stdout("whatsmeow", "WARN", true))
 	return container, nil
 }
 
 // GetOrCreateDevice returns the first device in the store (or creates a new one).
-func GetOrCreateDevice(container *sqlstore.Container) (*wastore.Device, error) {
-	devices, err := container.GetAllDevices()
+func GetOrCreateDevice(ctx context.Context, container *sqlstore.Container) (*wastore.Device, error) {
+	devices, err := container.GetAllDevices(ctx)
 	if err != nil {
 		return nil, err
 	}

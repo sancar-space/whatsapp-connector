@@ -40,7 +40,7 @@ func New(
 	advertiseURL string,
 	log *zap.Logger,
 ) (*Session, error) {
-	device, err := store.GetOrCreateDevice(container)
+	device, err := store.GetOrCreateDevice(context.Background(), container)
 	if err != nil {
 		return nil, fmt.Errorf("session %s: get device: %w", id, err)
 	}
