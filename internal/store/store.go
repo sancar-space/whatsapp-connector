@@ -32,7 +32,7 @@ func (s *SessionStore) Container(sessionID string) (*sqlstore.Container, error) 
 		return nil, fmt.Errorf("store: create session dir: %w", err)
 	}
 	dbPath := filepath.Join(dir, "whatsapp.db")
-	db, err := sql.Open("sqlite", dbPath+"?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL")
+	db, err := sql.Open("sqlite", dbPath+"?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL&_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("store: open sqlite %s: %w", dbPath, err)
 	}
