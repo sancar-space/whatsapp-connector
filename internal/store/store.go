@@ -37,6 +37,10 @@ func (s *SessionStore) Container(sessionID string) (*sqlstore.Container, error) 
 		return nil, fmt.Errorf("store: open sqlite %s: %w", dbPath, err)
 	}
 	container := sqlstore.NewWithDB(db, "sqlite3", waLog.Stdout("whatsmeow", "WARN", true))
+	if err := container.Upgrade(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("store: upgrade schema: %w", err)
+	}
 	return container, nil
 }
 
