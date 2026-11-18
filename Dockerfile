@@ -4,10 +4,8 @@ RUN apk add --no-cache git ca-certificates
 
 WORKDIR /build
 
-COPY go.mod go.sum* ./
-RUN go mod tidy && go mod download
-
 COPY . .
+RUN go mod tidy && go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /connector ./cmd/connector
 
 # ---
