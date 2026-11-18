@@ -220,7 +220,7 @@ func buildMessagePayload(evt *waevents.Message) map[string]interface{} {
 		p["mime"] = doc.GetMimetype()
 	} else if audio := msg.GetAudioMessage(); audio != nil {
 		p["type"] = "audio"
-		p["ptt"] = audio.GetPtt()
+		p["ptt"] = audio.GetPTT()
 	} else if vid := msg.GetVideoMessage(); vid != nil {
 		p["type"] = "video"
 		p["caption"] = vid.GetCaption()
