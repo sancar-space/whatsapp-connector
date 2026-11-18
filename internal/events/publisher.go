@@ -1,8 +1,10 @@
 package events
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,17 +24,21 @@ type Publisher struct {
 	keys       proto.Keys
 	numShards  int
 	instanceID string
+	webhookURL string
+	httpClient *http.Client
 	log        *zap.Logger
 	seqs       sync.Map // sessionID → *atomic.Int64
 	epoch      int
 }
 
-func New(rdb *redis.Client, keys proto.Keys, numShards int, instanceID string, epoch int, log *zap.Logger) *Publisher {
+func New(rdb *redis.Client, keys proto.Keys, numShards int, instanceID string, epoch int, webhookURL string, log *zap.Logger) *Publisher {
 	return &Publisher{
 		rdb:        rdb,
 		keys:       keys,
 		numShards:  numShards,
 		instanceID: instanceID,
+		webhookURL: webhookURL,
+		httpClient: &http.Client{Timeout: 10 * time.Second},
 		log:        log,
 		epoch:      epoch,
 	}
@@ -73,7 +79,25 @@ func (p *Publisher) Publish(ctx context.Context, sessionID, eventType string, pa
 	}
 
 	p.log.Debug("published event", zap.String("type", eventType), zap.String("sid", sessionID), zap.Int("shard", shard))
+
+	if p.webhookURL != "" {
+		go p.callWebhook(frame)
+	}
+
 	return nil
+}
+
+func (p *Publisher) callWebhook(frame *proto.EventFrame) {
+	b, err := json.Marshal(frame)
+	if err != nil {
+		return
+	}
+	resp, err := p.httpClient.Post(p.webhookURL, "application/json", bytes.NewReader(b))
+	if err != nil {
+		p.log.Warn("webhook call failed", zap.String("type", frame.Type), zap.String("sid", frame.SID), zap.Error(err))
+		return
+	}
+	resp.Body.Close()
 }
 
 func (p *Publisher) nextSeq(sessionID string) int {

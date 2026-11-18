@@ -19,6 +19,8 @@ type Config struct {
 
 	InstanceID string // unique ID for this process
 	Version    string
+
+	WebhookURL string // HTTP POST target for outbound events (optional)
 }
 
 func Load() *Config {
@@ -32,6 +34,7 @@ func Load() *Config {
 		MediaToken:  getenv("WHATSAPP_CONNECTOR_MEDIA_TOKEN", ""),
 		InstanceID:  getenv("WHATSAPP_CONNECTOR_INSTANCE_ID", ""),
 		Version:     getenv("WHATSAPP_CONNECTOR_VERSION", "1.0.0-sancar"),
+		WebhookURL:  getenv("CONNECTOR_WEBHOOK_URL", ""),
 	}
 	return cfg
 }

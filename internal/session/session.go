@@ -30,6 +30,15 @@ type Session struct {
 	advertiseURL string
 	log          *zap.Logger
 	mu           sync.Mutex
+	lastQR       string
+	lastQRMu     sync.RWMutex
+}
+
+// GetLastQR returns the most recent QR code string received for this session.
+func (s *Session) GetLastQR() string {
+	s.lastQRMu.RLock()
+	defer s.lastQRMu.RUnlock()
+	return s.lastQR
 }
 
 func New(
@@ -153,6 +162,9 @@ func (s *Session) handleEvent(rawEvt interface{}) {
 	switch evt := rawEvt.(type) {
 	case *waevents.QR:
 		if len(evt.Codes) > 0 {
+			s.lastQRMu.Lock()
+			s.lastQR = evt.Codes[0]
+			s.lastQRMu.Unlock()
 			_ = s.pub.Publish(ctx, s.ID, waproto.EventPairingQR, map[string]interface{}{
 				"qr": evt.Codes[0],
 			})
