@@ -14,7 +14,7 @@ type Config struct {
 	StoragePath string // SQLite databases per session
 
 	AdvertiseURL string // public URL for media blob server
-	MediaPort    string // HTTP port for media server
+	MediaPort    int    // HTTP port for media server
 	MediaToken   string // bearer token for media endpoint
 
 	InstanceID string // unique ID for this process
@@ -28,7 +28,7 @@ func Load() *Config {
 		EventShards: getenvInt("WHATSAPP_CONNECTOR_EVENT_SHARDS", 16),
 		StoragePath: getenv("WHATSAPP_CONNECTOR_STORAGE", "/app/data"),
 		AdvertiseURL: getenv("WHATSAPP_CONNECTOR_ADVERTISE_URL", ""),
-		MediaPort:   getenv("WHATSAPP_CONNECTOR_MEDIA_PORT", "8085"),
+		MediaPort:   getenvInt("WHATSAPP_CONNECTOR_MEDIA_PORT", 8085),
 		MediaToken:  getenv("WHATSAPP_CONNECTOR_MEDIA_TOKEN", ""),
 		InstanceID:  getenv("WHATSAPP_CONNECTOR_INSTANCE_ID", ""),
 		Version:     getenv("WHATSAPP_CONNECTOR_VERSION", "1.0.0-sancar"),
