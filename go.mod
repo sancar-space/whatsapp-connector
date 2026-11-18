@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.7.0
-	go.mau.fi/whatsmeow v0.0.0-20241209154621-01c3e9c4cf7d
+	go.mau.fi/whatsmeow v0.0.0-20261116000000-19d61352436f
 	go.uber.org/zap v1.27.0
 	modernc.org/sqlite v1.33.1
 )
