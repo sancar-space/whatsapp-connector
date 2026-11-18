@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -66,6 +67,49 @@ func main() {
 
 	// --- Session manager ---
 	mgr := session.NewManager(cfg.StoragePath, pub, mediaStore, cfg.AdvertiseURL, log)
+
+	// /send — HTTP REST endpoint for outbound messages (n8n → connector → WhatsApp)
+	mux.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if cfg.MediaToken != "" {
+			if r.Header.Get("Authorization") != "Bearer "+cfg.MediaToken {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
+		var payload struct {
+			SID  string `json:"sid"`
+			To   string `json:"to"`
+			Text string `json:"text"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if payload.SID == "" || payload.To == "" || payload.Text == "" {
+			http.Error(w, "sid, to and text are required", http.StatusBadRequest)
+			return
+		}
+		s := mgr.Get(payload.SID)
+		if s == nil {
+			http.Error(w, "session not found", http.StatusNotFound)
+			return
+		}
+		if !s.IsConnected() {
+			http.Error(w, "session not connected", http.StatusServiceUnavailable)
+			return
+		}
+		msgID, err := s.SendText(r.Context(), payload.To, payload.Text)
+		if err != nil {
+			http.Error(w, "send error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": msgID})
+	})
 
 	// Register QR endpoint after mgr is ready
 	mux.HandleFunc("/qr/", func(w http.ResponseWriter, r *http.Request) {

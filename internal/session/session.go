@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"sync"
+	"time"
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -198,16 +200,16 @@ func (s *Session) handleEvent(rawEvt interface{}) {
 }
 
 func (s *Session) handleMessage(ctx context.Context, evt *waevents.Message) {
-	payload := buildMessagePayload(evt)
+	payload := s.buildMessagePayload(evt)
 	_ = s.pub.Publish(ctx, s.ID, waproto.EventMessageReceived, payload)
 }
 
-func buildMessagePayload(evt *waevents.Message) map[string]interface{} {
+func (s *Session) buildMessagePayload(evt *waevents.Message) map[string]interface{} {
 	p := map[string]interface{}{
-		"id":        evt.Info.ID,
-		"from":      evt.Info.Sender.String(),
-		"chat":      evt.Info.Chat.String(),
-		"timestamp": evt.Info.Timestamp.Unix(),
+		"id":         evt.Info.ID,
+		"from":       evt.Info.Sender.String(),
+		"chat":       evt.Info.Chat.String(),
+		"timestamp":  evt.Info.Timestamp.Unix(),
 		"is_from_me": evt.Info.IsFromMe,
 	}
 
@@ -226,16 +228,33 @@ func buildMessagePayload(evt *waevents.Message) map[string]interface{} {
 		p["type"] = "image"
 		p["caption"] = img.GetCaption()
 		p["mime"] = img.GetMimetype()
+		if data, err := s.client.Download(img); err == nil {
+			p["url"] = s.storeBlobURL(data, img.GetMimetype(), "image")
+		}
 	} else if doc := msg.GetDocumentMessage(); doc != nil {
 		p["type"] = "document"
 		p["filename"] = doc.GetFileName()
 		p["mime"] = doc.GetMimetype()
+		if data, err := s.client.Download(doc); err == nil {
+			name := doc.GetFileName()
+			if name == "" {
+				name = "document"
+			}
+			p["url"] = s.storeBlobURL(data, doc.GetMimetype(), name)
+		}
 	} else if audio := msg.GetAudioMessage(); audio != nil {
 		p["type"] = "audio"
 		p["ptt"] = audio.GetPTT()
+		if data, err := s.client.Download(audio); err == nil {
+			p["url"] = s.storeBlobURL(data, audio.GetMimetype(), "audio")
+		}
 	} else if vid := msg.GetVideoMessage(); vid != nil {
 		p["type"] = "video"
 		p["caption"] = vid.GetCaption()
+		p["mime"] = vid.GetMimetype()
+		if data, err := s.client.Download(vid); err == nil {
+			p["url"] = s.storeBlobURL(data, vid.GetMimetype(), "video")
+		}
 	} else {
 		raw, _ := json.Marshal(msg)
 		p["type"] = "unknown"
@@ -243,4 +262,17 @@ func buildMessagePayload(evt *waevents.Message) map[string]interface{} {
 	}
 
 	return p
+}
+
+// storeBlobURL downloads media, stores it in the media store, and returns its URL.
+func (s *Session) storeBlobURL(data []byte, mimeType, baseName string) string {
+	if s.mediaStore == nil || s.advertiseURL == "" {
+		return ""
+	}
+	name := baseName
+	if exts, err := mime.ExtensionsByType(mimeType); err == nil && len(exts) > 0 {
+		name = baseName + exts[0]
+	}
+	token := s.mediaStore.Put(data, mimeType, name, 30*time.Minute)
+	return s.advertiseURL + "/blob/" + token
 }
