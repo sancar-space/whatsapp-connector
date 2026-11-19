@@ -200,11 +200,11 @@ func (s *Session) handleEvent(rawEvt interface{}) {
 }
 
 func (s *Session) handleMessage(ctx context.Context, evt *waevents.Message) {
-	payload := s.buildMessagePayload(evt)
+	payload := s.buildMessagePayload(ctx, evt)
 	_ = s.pub.Publish(ctx, s.ID, waproto.EventMessageReceived, payload)
 }
 
-func (s *Session) buildMessagePayload(evt *waevents.Message) map[string]interface{} {
+func (s *Session) buildMessagePayload(ctx context.Context, evt *waevents.Message) map[string]interface{} {
 	p := map[string]interface{}{
 		"id":         evt.Info.ID,
 		"from":       evt.Info.Sender.String(),
@@ -228,14 +228,14 @@ func (s *Session) buildMessagePayload(evt *waevents.Message) map[string]interfac
 		p["type"] = "image"
 		p["caption"] = img.GetCaption()
 		p["mime"] = img.GetMimetype()
-		if data, err := s.client.Download(img); err == nil {
+		if data, err := s.client.Download(ctx, img); err == nil {
 			p["url"] = s.storeBlobURL(data, img.GetMimetype(), "image")
 		}
 	} else if doc := msg.GetDocumentMessage(); doc != nil {
 		p["type"] = "document"
 		p["filename"] = doc.GetFileName()
 		p["mime"] = doc.GetMimetype()
-		if data, err := s.client.Download(doc); err == nil {
+		if data, err := s.client.Download(ctx, doc); err == nil {
 			name := doc.GetFileName()
 			if name == "" {
 				name = "document"
@@ -245,14 +245,14 @@ func (s *Session) buildMessagePayload(evt *waevents.Message) map[string]interfac
 	} else if audio := msg.GetAudioMessage(); audio != nil {
 		p["type"] = "audio"
 		p["ptt"] = audio.GetPTT()
-		if data, err := s.client.Download(audio); err == nil {
+		if data, err := s.client.Download(ctx, audio); err == nil {
 			p["url"] = s.storeBlobURL(data, audio.GetMimetype(), "audio")
 		}
 	} else if vid := msg.GetVideoMessage(); vid != nil {
 		p["type"] = "video"
 		p["caption"] = vid.GetCaption()
 		p["mime"] = vid.GetMimetype()
-		if data, err := s.client.Download(vid); err == nil {
+		if data, err := s.client.Download(ctx, vid); err == nil {
 			p["url"] = s.storeBlobURL(data, vid.GetMimetype(), "video")
 		}
 	} else {
